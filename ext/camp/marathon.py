@@ -26,7 +26,7 @@ class Marathon(commands.Cog):
 
 	@commands.command(name = "problem")
 	async def mark_problem(self, ctx, difficulty : int = 0, *, s : str = "Nothing yet"):
-		if not isinstance(ctx.channel, discord.Thread) and 0:
+		if not isinstance(ctx.channel, discord.Thread):
 			await ctx.send("এইটা তো থ্রেড না। থ্রেডের ভিতর মারা লাগবে এই কমান্ড। ")
 			return
 
@@ -41,6 +41,10 @@ class Marathon(commands.Cog):
 
 		if difficulty == 0:
 			await ctx.send("প্রব্লেমের ডিফিকাল্টি না দিলে পাব্লিক কইরে মজা পাইবো কি?")
+			return
+
+		if difficulty not in range(1, 15):
+			await ctx.send("প্রব্লেমের ডিফিকাল্টি ১-১৪ এর বাইরে দেয়া যাইবো না। আমাকে জিগাবেন না কেন এরকম হইলো।")
 			return
 
 		entry = {
@@ -61,8 +65,49 @@ class Marathon(commands.Cog):
 
 		await ctx.message.add_reaction("👌")
 
+	@commands.command(name = "edit")
+	async def edit(self, ctx, difficulty : int = 0):
+		if not isinstance(ctx.channel, discord.Thread):
+			await ctx.send("এইটা তো থ্রেড না। থ্রেডের ভিতর মারা লাগবে এই কমান্ড। ")
+			return
+
+		prb = self.get_thread_problem(ctx.channel.id)
+
+		if not prb:
+			await ctx.send("এই থ্রেডে কোনো প্রব্লেম চলিতেছে না। ?problem এর মাধ্যমে নতুন প্রব্লেম শুরু করন যাইবো। ")
+			return
+
+		if not prb['active']:
+			await ctx.send("এইখানে যে প্রব্লেম ছিলো তা কে জানি ইতিমধ্যে করিয়া ফেলাইছে। অহন আপনি অন্যখানে যান। ")
+			return
+
+		if prb['owner'] != ctx.author.id:
+			await ctx.send("অন্যের প্রব্লেমের মালিকানা নিজে জাহির করার চেষ্টা করেন কেন?")
+			return
+
+		if difficulty not in range(1, 15):
+			await ctx.send("প্রব্লেমের ডিফিকাল্টি ১-১৪ এর বাইরে দেয়া যাইবো না। আমাকে জিগাবেন না কেন এরকম হইলো।")
+			return
+			
+		old = self.bot.data['marathon']['problems'][str(ctx.channel.id)]['difficulty']
+		self.bot.data['marathon']['problems'][str(ctx.channel.id)]['difficulty'] = difficulty
+
+		response = f"ঠিকাছে, এই প্রব্লেমের জন্যে এখন মাইনষে {old} পয়েন্ট না পাইয়া {difficulty} পয়েন্ট পাইবো।"
+		r = random.random()
+		print(r)
+		if (r> 0.75):
+			response += random.choice([
+				" কিন্তু জীবনে এত এলোমেলো করা ভালা কথা না।" ,
+				" কথার এত উলটপালট করেন ক্যান?",  
+			])
+		await ctx.send(response)
+
+
 	@commands.command(name = "solved")
 	async def solved(self, ctx, mem : discord.Member = None):
+		if not isinstance(ctx.channel, discord.Thread):
+			await ctx.send("এইটা তো থ্রেড না। থ্রেডের ভিতর মারা লাগবে এই কমান্ড। ")
+			return
 
 		prb = self.get_thread_problem(ctx.channel.id)
 
@@ -111,7 +156,13 @@ class Marathon(commands.Cog):
 			"ঠিকাছে।",
 			"পারছে? ভালা তো।",
 			"বুঝলাম।", 
+			"বাহ!",
+			"সল্যুশানখান কিন্তু সুন্দর আছে।",
+			"বড়ই সুন্দর কথা।",
+			"আমি যদি ওর মতোন পারতাম!",
+			"রাজুও এই প্রব্লেমখান নিয়া অনেকক্ষণ বইসা ছিলো।",
 			"এম্নে পড়ালেখা চালায় গেলে জীবনে কিছু একটা করা যাইবো।",
+			"আমাগো স্কুলের আপা তার অনেক প্রশংসা করে।",
 		]
 		response_points_awarded = f"ওরে {self.bot.data['marathon']['problems'][str(ctx.channel.id)]['difficulty']} পয়েন্ট দিলাম।"
 		await ctx.send(random.choice(responses) + " " + response_points_awarded)
@@ -143,20 +194,17 @@ class Marathon(commands.Cog):
 	async def send_scoreboard(self, ctx):
 		scores = self.bot.data['marathon']['scores']
 
-		s = ""
+		s = "👑 "
 		for user_id_str, score in sorted(scores.items(), key = lambda m : m[1], reverse = True):
-			s += f"{self.bot.get_user(int(user_id_str)).display_name} - {score}\n"
+			s += f"{self.bot.get_user(int(user_id_str)).mention} - {score}\n🤮 "
 
-		await ctx.send(s)
+		await ctx.send(s[:-2], allowed_mentions = discord.AllowedMentions.none())
 
+	@commands.is_owner()
 	@commands.command(name = 'rm')
 	async def reload_extension_temporary(self, ctx):
 		await self.bot.reload_extension('ext.camp.marathon')
 		await ctx.send("👌")
-
-	@commands.command(name = "data")
-	async def test_command(self, ctx):
-		await ctx.send(self.bot.data.data)
 
 async def setup(bot):
 	await bot.add_cog(Marathon(bot))
